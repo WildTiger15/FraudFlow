@@ -1,0 +1,13 @@
+# Raw dataset is ~490 MB: download it with data/download_data.py
+data/raw/
+data/*.db
+data/*.db-journal
+# Secrets
+.env
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+# Local tunnel / scratch
+*.log

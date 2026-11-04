@@ -25,7 +25,28 @@ _Generated 2026-11-04 23:38 UTC_
 <!-- section:detection -->
 ## 2. Detection quality
 
-{not run yet: python -m detect.evaluate}
+_Generated 2026-11-04 23:47 UTC_
+
+* Transactions screened (TRANSFER and CASH_OUT): **454,386** of 1,030,563 loaded, over 3 simulated days.
+* Labelled fraud among screened: **890** (every PaySim fraud is TRANSFER or CASH_OUT).
+* Measured per transaction against PaySim's `isFraud` label. Labels are never used by the detectors.
+* Rule thresholds were set by hand from AML patterns. After a first run flagged 82% of screened transactions, the ACCOUNT_DRAINED, VERY_LARGE_TRANSFER and MANY_SENDERS thresholds were revised once to keep alert volume manageable (see docs/DETECTION_NOTES.md). The labels were visible during that revision, so treat these numbers as optimistic: there is no separate held-out period yet.
+* The Isolation Forest flags the most unusual 1% of screened transactions.
+
+| Method | Alerts | Fraud caught | Recall | Precision | False alarms per 1,000 screened |
+|---|---:|---:|---:|---:|---:|
+| Rules (any rule) | 7,360 | 839 / 890 | 94.3% | 11.4% | 14.4 |
+| Anomaly detection (Isolation Forest) | 4,544 | 30 / 890 | 3.4% | 0.7% | 9.9 |
+| Combined (rules OR anomaly) | 11,383 | 847 / 890 | 95.2% | 7.4% | 23.2 |
+| Both agree (rules AND anomaly) | 521 | 22 / 890 | 2.5% | 4.2% | 1.1 |
+| Rule only: ACCOUNT_DRAINED | 1,484 | 812 / 890 | 91.2% | 54.7% | 1.5 |
+| Rule only: PASS_THROUGH | 1,476 | 417 / 890 | 46.9% | 28.3% | 2.3 |
+| Rule only: STRUCTURING | 35 | 0 / 890 | 0.0% | 0.0% | 0.1 |
+| Rule only: SPIKE_VS_NORMAL | 1,856 | 38 / 890 | 4.3% | 2.0% | 4.0 |
+| Rule only: VERY_LARGE_TRANSFER | 1,258 | 59 / 890 | 6.6% | 4.7% | 2.6 |
+| Rule only: MANY_SENDERS | 2,138 | 5 / 890 | 0.6% | 0.2% | 4.7 |
+
+Alerts saved for review: **11,383** (combined method). By source: rules 6,839, anomaly 4,023, both 521.
 <!-- end:detection -->
 
 <!-- section:drafting -->

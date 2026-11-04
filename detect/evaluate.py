@@ -88,6 +88,13 @@ def save_alerts(table, df, conn):
     return alerts
 
 
+def save_metrics(rows, conn):
+    """Keep the metrics in SQLite too, so the dashboard reads the same numbers as results.md."""
+    table = pd.DataFrame([{"method": name, **m} for name, m in rows.items()])
+    table.to_sql("detection_metrics", conn, if_exists="replace", index=False)
+    conn.commit()
+
+
 def _reasons_text(rule_codes, anomaly_flag):
     reasons = [f"{code}: {REASONS[code]}" for code in rule_codes.split(",") if code]
     if anomaly_flag:
@@ -124,6 +131,7 @@ def main():
     table = build_results(df)
     rows = metrics_table(table)
     alerts = save_alerts(table, df, conn)
+    save_metrics(rows, conn)
     text = to_markdown(rows, len(table), len(df), df["day"].nunique())
     text += f"\n\nAlerts saved for review: **{len(alerts):,}** (combined method). "
     text += "By source: " + ", ".join(f"{k} {v:,}" for k, v in alerts["flagged_by"].value_counts().items()) + "."

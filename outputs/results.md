@@ -25,7 +25,7 @@ _Generated 2026-11-04 23:38 UTC_
 <!-- section:detection -->
 ## 2. Detection quality
 
-_Generated 2026-11-04 23:47 UTC_
+_Generated 2026-11-04 23:54 UTC_
 
 * Transactions screened (TRANSFER and CASH_OUT): **454,386** of 1,030,563 loaded, over 3 simulated days.
 * Labelled fraud among screened: **890** (every PaySim fraud is TRANSFER or CASH_OUT).
@@ -52,7 +52,7 @@ Alerts saved for review: **11,383** (combined method). By source: rules 6,839, a
 <!-- section:drafting -->
 ## 3. AI case drafts
 
-_Generated 2026-11-04 23:47 UTC_
+_Generated 2026-11-04 23:54 UTC_
 
 * Alerts drafted in this run: **20** (random sample spread across rules / anomaly / both, seed 42).
 * Drafted by: `template_no_ai` 20

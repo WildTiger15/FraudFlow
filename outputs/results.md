@@ -64,7 +64,10 @@ _Generated 2026-11-04 23:54 UTC_
 <!-- section:pipeline -->
 ## 4. Review decisions
 
-{not run yet: decisions come from reviewers via the approval flow}
+_Generated 2026-11-04 23:56 UTC_
+
+* Drafted cases: 20; still waiting for a person: 20
+* Human decisions logged: **0**
 <!-- end:pipeline -->
 
 <!-- section:timing -->

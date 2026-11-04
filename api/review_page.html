@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FraudFlow Review</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1d2330; --muted:#5b6475; --line:#d9dde5; --warn:#a33a00; --warnbg:#fff1e6; --ok:#1f6f43; --okbg:#e8f6ee; --accent:#2747b8; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui, sans-serif; }
+  header { background:#22262f; color:#fff; padding:12px 16px; }
+  header strong { font-size:17px; }
+  .fallback { background:#ffd84d; color:#2b2200; padding:8px 16px; font-weight:600; }
+  main { display:grid; grid-template-columns:280px 1fr; gap:16px; padding:16px; max-width:1200px; margin:auto; }
+  @media (max-width:800px) { main { grid-template-columns:1fr; } }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:14px; }
+  ul.cases { list-style:none; margin:0; padding:0; }
+  ul.cases li { padding:8px; border-bottom:1px solid var(--line); cursor:pointer; }
+  ul.cases li:hover, ul.cases li.active { background:#eef1fb; }
+  .tag { display:inline-block; font-size:12px; padding:1px 6px; border-radius:4px; }
+  .low { background:var(--warnbg); color:var(--warn); } .high { background:var(--okbg); color:var(--ok); }
+  .banner { padding:8px 10px; border-radius:6px; margin-bottom:10px; font-weight:600; }
+  table { border-collapse:collapse; width:100%; font-size:13px; } td, th { border-bottom:1px solid var(--line); padding:4px 6px; text-align:left; }
+  .scroll { overflow-x:auto; }
+  label { display:block; margin-top:8px; font-weight:600; }
+  input, textarea { width:100%; box-sizing:border-box; padding:6px; border:1px solid var(--line); border-radius:4px; font:inherit; }
+  button { margin:10px 8px 0 0; padding:8px 14px; border:0; border-radius:6px; font:inherit; cursor:pointer; color:#fff; }
+  .approve { background:var(--ok); } .edit { background:var(--accent); } .reject { background:#9b1c1c; }
+  .muted { color:var(--muted); font-size:13px; }
+</style>
+</head>
+<body>
+<header><strong>FraudFlow</strong> · alert review · synthetic PaySim data only</header>
+<div class="fallback">FALLBACK APPROVAL PAGE: this is not Power Automate. Use it when the Power Automate flow is not set up. Decisions are logged the same way, with channel = fallback_page.</div>
+<main>
+  <section class="card">
+    <label for="apikey">API key (if the server sets FRAUDFLOW_API_KEY)</label>
+    <input id="apikey" type="password" autocomplete="off">
+    <label for="reviewer">Your name</label>
+    <input id="reviewer" autocomplete="name">
+    <h3>Cases waiting for review</h3>
+    <ul class="cases" id="cases"><li class="muted">Loading…</li></ul>
+  </section>
+  <section class="card" id="detail"><p class="muted">Pick a case on the left. The AI draft is only a suggestion; you decide.</p></section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+let openedAt = null, current = null;
+try { $("apikey").value = sessionStorage.getItem("ff_key") || ""; $("reviewer").value = localStorage.getItem("ff_reviewer") || ""; } catch (e) {}
+function headers() {
+  const h = { "Content-Type": "application/json" };
+  const key = $("apikey").value.trim(); if (key) h["X-API-Key"] = key;
+  try { sessionStorage.setItem("ff_key", key); localStorage.setItem("ff_reviewer", $("reviewer").value.trim()); } catch (e) {}
+  return h;
+}
+function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+async function loadCases() {
+  const res = await fetch("/cases?status=pending_review&limit=200", { headers: headers() });
+  if (!res.ok) { $("cases").innerHTML = `<li class="muted">Could not load cases (${res.status}).</li>`; return; }
+  const cases = await res.json();
+  $("cases").innerHTML = cases.length ? cases.map(c =>
+    `<li data-id="${esc(c.case_id)}">${esc(c.case_id)} <span class="tag ${c.confidence}">${c.confidence}</span></li>`).join("")
+    : `<li class="muted">No cases waiting.</li>`;
+  document.querySelectorAll("#cases li[data-id]").forEach(li => li.onclick = () => openCase(li.dataset.id, li));
+}
+function txTable(txs) {
+  if (!txs.length) return `<p class="muted">No transactions in the window.</p>`;
+  return `<div class="scroll"><table><tr><th>ID</th><th>Day</th><th>Hour</th><th>Type</th><th>Amount</th><th>Sender</th><th>Receiver</th><th>Sender bal. before → after</th><th>Receiver bal. before → after</th></tr>` +
+    txs.map(t => `<tr><td>${esc(t.tx_id)}</td><td>${t.day}</td><td>${t.hour}</td><td>${esc(t.type)}</td><td>${t.amount}</td><td>${esc(t.sender)}</td><td>${esc(t.receiver)}</td><td>${t.sender_balance_before} → ${t.sender_balance_after}</td><td>${t.receiver_balance_before} → ${t.receiver_balance_after}</td></tr>`).join("") + `</table></div>`;
+}
+async function openCase(id, li) {
+  document.querySelectorAll("#cases li").forEach(x => x.classList.remove("active")); li.classList.add("active");
+  const res = await fetch(`/cases/${encodeURIComponent(id)}`, { headers: headers() });
+  const c = await res.json(); current = c; openedAt = performance.now();
+  const d = c.draft, f = c.facts, rf = d.report_fields;
+  $("detail").innerHTML = `
+    <div class="banner ${c.confidence}">${esc(c.label)}</div>
+    ${c.check_failures.length ? `<p><strong>Fact check failures:</strong> ${c.check_failures.map(esc).join("; ")}</p>` : ""}
+    <h2>${esc(c.case_id)}</h2><p class="muted">Drafted by ${esc(c.drafted_by)} · alert ${esc(c.alert_id)} · flagged by ${esc(f.flagged_by)}</p>
+    <h3>Draft summary</h3><p>${esc(d.summary)}</p>
+    <p><strong>What happened.</strong> ${esc(d.what_happened)}</p>
+    <p><strong>Why flagged.</strong> ${esc(d.why_flagged)}</p>
+    <p><strong>What to check next</strong></p><ul>${d.what_to_check_next.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+    <h3>Report fields (UTR style)</h3><ul>${Object.entries(rf).map(([k, v]) => `<li><strong>${esc(k.replaceAll("_", " "))}:</strong> ${esc(Array.isArray(v) ? v.join(", ") : v)}</li>`).join("")}</ul>
+    <p><strong>Missing information:</strong> ${esc(d.missing_information.join(", ") || "none listed")}</p>
+    <h3>Source data (check the draft against this)</h3>
+    <p><strong>Alert reasons</strong></p><ul>${f.reasons.map(r => `<li>${esc(r)}</li>`).join("")}</ul>
+    <p><strong>Subject ${esc(f.subject_account)}</strong></p>${txTable(f.subject_recent_activity)}
+    <p><strong>Counterparty ${esc(f.counterparty_account)}</strong></p>${txTable(f.counterparty_recent_activity)}
+    <h3>Your decision</h3>
+    <label for="edited">Edited summary (needed for "Approve with edits")</label><textarea id="edited" rows="4">${esc(d.summary)}</textarea>
+    <label for="comment">Comment (why)</label><textarea id="comment" rows="2"></textarea>
+    <button class="approve" onclick="decide('approve')">Approve draft</button>
+    <button class="edit" onclick="decide('edit')">Approve with edits</button>
+    <button class="reject" onclick="decide('reject')">Reject</button>
+    <p id="msg" class="muted"></p>`;
+}
+async function decide(decision) {
+  const reviewer = $("reviewer").value.trim();
+  if (reviewer.length < 2) { $("msg").textContent = "Enter your name first."; return; }
+  const body = { decision, reviewer, channel: "fallback_page", comment: $("comment").value || null,
+    review_seconds: Math.round((performance.now() - openedAt) / 100) / 10,
+    edited_summary: decision === "edit" ? $("edited").value : null };
+  const res = await fetch(`/cases/${encodeURIComponent(current.case_id)}/decision`, { method: "POST", headers: headers(), body: JSON.stringify(body) });
+  const out = await res.json();
+  $("msg").textContent = res.ok ? `Recorded: ${out.decision} by ${out.reviewer} at ${out.decided_at}. ${out.note}` : `Not recorded: ${JSON.stringify(out.detail)}`;
+  if (res.ok) loadCases();
+}
+$("apikey").onchange = loadCases;
+loadCases();
+</script>
+</body>
+</html>

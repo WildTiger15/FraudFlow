@@ -1,0 +1,80 @@
+{
+  "_note": "HAND-WRITTEN definition of the FraudFlow review flow (Logic Apps / Power Automate workflow schema). It has NOT been exported from a working Power Automate environment. Build the flow with flow/SETUP.md, then replace this file with your real export (Export > Package (.zip)) and add screenshots to flow/screenshots/.",
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "$connections": { "defaultValue": {}, "type": "Object" },
+      "FraudFlowBaseUrl": { "defaultValue": "https://YOUR-TUNNEL.devtunnels.ms", "type": "String" },
+      "FraudFlowApiKey": { "defaultValue": "change-me", "type": "String" },
+      "ReviewerEmail": { "defaultValue": "you@example.com", "type": "String" }
+    },
+    "triggers": {
+      "Every_15_minutes": {
+        "type": "Recurrence",
+        "recurrence": { "frequency": "Minute", "interval": 15 }
+      }
+    },
+    "actions": {
+      "Get_pending_cases": {
+        "type": "Http",
+        "inputs": {
+          "method": "GET",
+          "uri": "@{parameters('FraudFlowBaseUrl')}/cases?status=pending_review&limit=10",
+          "headers": { "X-API-Key": "@parameters('FraudFlowApiKey')" }
+        },
+        "runAfter": {}
+      },
+      "For_each_case": {
+        "type": "Foreach",
+        "foreach": "@body('Get_pending_cases')",
+        "runtimeConfiguration": { "concurrency": { "repetitions": 1 } },
+        "runAfter": { "Get_pending_cases": ["Succeeded"] },
+        "actions": {
+          "Start_and_wait_for_an_approval": {
+            "type": "OpenApiConnectionWebhook",
+            "inputs": {
+              "host": {
+                "connectionName": "shared_approvals",
+                "operationId": "StartAndWaitForAnApproval",
+                "apiId": "/providers/Microsoft.PowerApps/apis/shared_approvals"
+              },
+              "parameters": {
+                "approvalType": "CustomResponse",
+                "WebhookApprovalCreationInput/responseOptions": ["Approve", "Approve with edits", "Reject"],
+                "WebhookApprovalCreationInput/title": "FraudFlow case @{items('For_each_case')?['case_id']} - @{items('For_each_case')?['label']}",
+                "WebhookApprovalCreationInput/assignedTo": "@parameters('ReviewerEmail')",
+                "WebhookApprovalCreationInput/details": "**Synthetic data only. The AI draft is a suggestion; you decide.**\n\n@{items('For_each_case')?['summary']}\n\nConfidence: @{items('For_each_case')?['confidence']}\nFact check failures: @{join(items('For_each_case')?['check_failures'], '; ')}\n\nTo approve with edits, put your corrected summary in the comment box.",
+                "WebhookApprovalCreationInput/itemLink": "@{parameters('FraudFlowBaseUrl')}/review",
+                "WebhookApprovalCreationInput/itemLinkDescription": "Open the full case and source transactions"
+              },
+              "authentication": "@parameters('$authentication')"
+            }
+          },
+          "Pick_decision": {
+            "type": "Compose",
+            "runAfter": { "Start_and_wait_for_an_approval": ["Succeeded"] },
+            "inputs": "@if(equals(body('Start_and_wait_for_an_approval')?['outcome'], 'Approve'), 'approve', if(equals(body('Start_and_wait_for_an_approval')?['outcome'], 'Approve with edits'), 'edit', 'reject'))"
+          },
+          "Post_decision_to_FraudFlow": {
+            "type": "Http",
+            "runAfter": { "Pick_decision": ["Succeeded"] },
+            "inputs": {
+              "method": "POST",
+              "uri": "@{parameters('FraudFlowBaseUrl')}/cases/@{items('For_each_case')?['case_id']}/decision",
+              "headers": { "X-API-Key": "@parameters('FraudFlowApiKey')", "Content-Type": "application/json" },
+              "body": {
+                "decision": "@outputs('Pick_decision')",
+                "reviewer": "@{first(body('Start_and_wait_for_an_approval')?['responses'])?['responder']?['displayName']}",
+                "comment": "@{first(body('Start_and_wait_for_an_approval')?['responses'])?['comments']}",
+                "edited_summary": "@{if(equals(outputs('Pick_decision'), 'edit'), first(body('Start_and_wait_for_an_approval')?['responses'])?['comments'], null)}",
+                "channel": "power_automate"
+              }
+            }
+          }
+        }
+      }
+    },
+    "outputs": {}
+  }
+}

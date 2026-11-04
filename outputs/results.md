@@ -52,7 +52,13 @@ Alerts saved for review: **11,383** (combined method). By source: rules 6,839, a
 <!-- section:drafting -->
 ## 3. AI case drafts
 
-{not run yet: python -m agent.generate_drafts}
+_Generated 2026-11-04 23:47 UTC_
+
+* Alerts drafted in this run: **20** (random sample spread across rules / anomaly / both, seed 42).
+* Drafted by: `template_no_ai` 20
+* Passed all automatic fact checks: **20 / 20**
+* Marked LOW CONFIDENCE (failed a check, or the drafter said low): **20 / 20**
+* NOTE: `template_no_ai` drafts were made WITHOUT AI because no ANTHROPIC_API_KEY was set. They show the pipeline and checks working, not AI quality. Rerun with a key for AI drafts.
 <!-- end:drafting -->
 
 <!-- section:pipeline -->

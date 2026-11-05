@@ -7,7 +7,10 @@ Endpoints:
   GET  /cases/{case_id}             full draft, facts and check results
   POST /cases/{case_id}/decision    record approve / edit / reject by a named reviewer
   GET  /decisions                   the decision log (audit trail)
+  GET  /metrics                     detection quality numbers
   GET  /review                      FALLBACK approval page (not Power Automate)
+  GET  /                            showcase landing page
+Set FRAUDFLOW_READ_ONLY=1 for the public demo: decisions are then refused.
 The API never approves, closes or files anything by itself: only a POSTed human decision changes a case.
 """
 import json
@@ -18,12 +21,20 @@ from typing import Literal, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 import db
 
 app = FastAPI(title="FraudFlow API", description="Synthetic data only. Every case needs a human decision.")
+ROOT = Path(__file__).resolve().parent.parent
 REVIEW_PAGE = Path(__file__).parent / "review_page.html"
+LANDING_PAGE = ROOT / "showcase" / "index.html"
+app.mount("/assets", StaticFiles(directory=ROOT / "dashboard" / "screenshots"), name="assets")
+
+
+def read_only():
+    return os.environ.get("FRAUDFLOW_READ_ONLY") == "1"
 
 
 def get_conn():
@@ -90,6 +101,8 @@ def get_case(case_id: str, conn=Depends(get_conn)):
 
 @app.post("/cases/{case_id}/decision", dependencies=[Depends(require_key)])
 def record_decision(case_id: str, body: Decision, conn=Depends(get_conn)):
+    if read_only():
+        raise HTTPException(status_code=403, detail="This is the read-only public demo. Run FraudFlow locally to record decisions.")
     row = conn.execute("SELECT status FROM cases WHERE case_id = ?", (case_id,)).fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="Case not found")
@@ -116,6 +129,21 @@ def record_decision(case_id: str, body: Decision, conn=Depends(get_conn)):
 @app.get("/decisions", dependencies=[Depends(require_key)])
 def list_decisions(conn=Depends(get_conn)):
     return [dict(r) for r in conn.execute("SELECT * FROM decisions ORDER BY decision_id").fetchall()]
+
+
+@app.get("/metrics", dependencies=[Depends(require_key)])
+def detection_metrics(conn=Depends(get_conn)):
+    return [dict(r) for r in conn.execute("SELECT * FROM detection_metrics").fetchall()]
+
+
+@app.get("/config")
+def public_config():
+    return {"read_only": read_only()}
+
+
+@app.get("/", response_class=HTMLResponse)
+def landing_page():
+    return LANDING_PAGE.read_text(encoding="utf-8")
 
 
 @app.get("/review", response_class=HTMLResponse)

@@ -105,6 +105,9 @@ async function decide(decision) {
   $("msg").textContent = res.ok ? `Recorded: ${out.decision} by ${out.reviewer} at ${out.decided_at}. ${out.note}` : `Not recorded: ${JSON.stringify(out.detail)}`;
   if (res.ok) loadCases();
 }
+fetch("/config").then(r => r.json()).then(c => { if (c.read_only) {
+  document.querySelector(".fallback").textContent = "READ-ONLY PUBLIC DEMO of the fallback approval page (not Power Automate). You can browse real drafts and source data; decisions are disabled here.";
+} });
 $("apikey").onchange = loadCases;
 loadCases();
 </script>

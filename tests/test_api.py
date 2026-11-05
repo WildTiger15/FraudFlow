@@ -47,3 +47,11 @@ def test_edit_needs_text_and_reviewer_needs_name(client):
 def test_review_page_is_labelled_fallback(client):
     html = client.get("/review").text
     assert "FALLBACK APPROVAL PAGE" in html and "not Power Automate" in html
+
+
+def test_read_only_demo_refuses_decisions(client, monkeypatch):
+    monkeypatch.setenv("FRAUDFLOW_READ_ONLY", "1")
+    res = client.post("/cases/C-A000001/decision", json={"decision": "approve", "reviewer": "Visitor"})
+    assert res.status_code == 403
+    assert client.get("/config").json() == {"read_only": True}
+    assert client.get("/cases").json()[0]["status"] == "pending_review"

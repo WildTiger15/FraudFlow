@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FraudFlow</title>
+<meta name="description" content="AI assisted fraud alert review prototype on synthetic PaySim data. A human approves every case.">
+<style>
+  :root { --bg:#fcfcfb; --card:#ffffff; --ink:#0b0b0b; --ink2:#52514e; --line:#e4e3df; --accent:#2a78d6; --ok:#1f6f43; --okbg:#e8f6ee; --todo:#8a5a00; --todobg:#fff4dc; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#1a1a19; --card:#232322; --ink:#f0efec; --ink2:#c3c2b7; --line:#3a3a38; --accent:#3987e5; --ok:#7fd3a4; --okbg:#1f3a2b; --todo:#f0c060; --todobg:#3a3018; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .wrap { max-width:980px; margin:auto; padding:0 16px; }
+  header { padding:48px 0 24px; }
+  h1 { font-size:40px; margin:0 0 4px; letter-spacing:-0.5px; }
+  .tag { color:var(--ink2); font-size:19px; margin:0 0 16px; }
+  .notice { display:inline-block; border:1px solid var(--line); border-radius:6px; padding:6px 10px; font-size:14px; color:var(--ink2); }
+  .buttons a { display:inline-block; margin:16px 8px 0 0; padding:10px 16px; border-radius:6px; text-decoration:none; font-weight:600; border:1px solid var(--line); color:var(--ink); background:var(--card); }
+  .buttons a.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  section { padding:24px 0; border-top:1px solid var(--line); }
+  h2 { font-size:22px; margin:0 0 12px; }
+  ol.flow { counter-reset:s; list-style:none; padding:0; display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:10px; }
+  ol.flow li { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px; font-size:14px; }
+  ol.flow li b { display:block; font-size:15px; margin-bottom:2px; }
+  .scroll { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; font-size:14px; background:var(--card); }
+  th, td { padding:6px 8px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
+  th:first-child, td:first-child { text-align:left; }
+  th { color:var(--ink2); font-weight:600; }
+  img { max-width:100%; border:1px solid var(--line); border-radius:8px; }
+  .status { list-style:none; padding:0; }
+  .status li { margin:6px 0; }
+  .pill { display:inline-block; min-width:86px; text-align:center; font-size:12px; font-weight:700; padding:2px 8px; border-radius:4px; margin-right:8px; }
+  .done { background:var(--okbg); color:var(--ok); } .todo { background:var(--todobg); color:var(--todo); }
+  .muted { color:var(--ink2); font-size:14px; }
+  footer { padding:24px 0 48px; color:var(--ink2); font-size:14px; border-top:1px solid var(--line); }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>FraudFlow</h1>
+    <p class="tag">An AI assisted fraud and anti money laundering alert review prototype. Rules and anomaly detection flag activity, an AI agent drafts the case, automatic checks verify every fact, and a person approves, edits or rejects every case.</p>
+    <span class="notice">Synthetic PaySim data only: no real customers. Read-only public demo.</span>
+    <div class="buttons">
+      <a class="primary" href="/review">Browse drafted cases</a>
+      <a href="https://github.com/WildTiger15/FraudFlow">Code on GitHub</a>
+      <a href="/docs">API docs</a>
+    </div>
+  </header>
+
+  <section>
+    <h2>How it works</h2>
+    <ol class="flow">
+      <li><b>1. Flag</b>6 explainable rules plus an Isolation Forest screen 454,386 transfers and cash outs.</li>
+      <li><b>2. Gather</b>For each alert, collect the flagged transaction and both accounts' recent activity.</li>
+      <li><b>3. Draft</b>Claude writes a case summary and UTR-style report fields, citing transaction IDs.</li>
+      <li><b>4. Check</b>Every number and ID in the draft is matched to the data; failures are marked low confidence.</li>
+      <li><b>5. Decide</b>A named reviewer approves, edits or rejects; the decision and time are logged.</li>
+      <li><b>6. Measure</b>Detection quality, decisions and review time on a dashboard.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Detection quality</h2>
+    <p class="muted">Measured per transaction against PaySim's fraud labels on simulated days 1 to 3. Thresholds were revised once for alert volume with labels visible, so these are optimistic (see the detection notes on GitHub).</p>
+    <div class="scroll"><table id="metrics"><tr><td>Loading…</td></tr></table></div>
+  </section>
+
+  <section>
+    <h2>Dashboard</h2>
+    <p class="muted">Built from the pipeline data by the Excel/matplotlib fallback (Power BI version not built yet). Decision and timing panels stay empty until real reviews happen.</p>
+    <img src="/assets/dashboard.png" alt="Four panels: alerts per simulated day by source, recall and precision by method, reviewer decisions (no data yet), review time per case (no data yet)">
+  </section>
+
+  <section>
+    <h2>Status, honestly</h2>
+    <ul class="status">
+      <li><span class="pill done">Done</span>Detection rules, Isolation Forest and evaluation with sample sizes</li>
+      <li><span class="pill done">Done</span>Case builder, Claude drafter, automatic fact checks, tests that catch invented facts</li>
+      <li><span class="pill done">Done</span>Review API, fallback approval page, decision log</li>
+      <li><span class="pill done">Done</span>Dashboard (Excel fallback), use case, risks, investigator guide</li>
+      <li><span class="pill todo">Pending</span>Drafts in this demo are from the no-AI template until the Claude API key is set</li>
+      <li><span class="pill todo">Pending</span>Power Automate flow: designed, not yet built in a Microsoft tenant</li>
+      <li><span class="pill todo">Pending</span>Power BI version of the dashboard</li>
+      <li><span class="pill todo">Pending</span>Timing study (15 manual + 15 AI assisted reviews)</li>
+    </ul>
+  </section>
+
+  <footer>
+    FraudFlow is a learning prototype. It never files, closes or sends anything; a person decides every case. ·
+    <a href="https://github.com/WildTiger15/FraudFlow/blob/main/outputs/results.md">All results</a> ·
+    <a href="https://github.com/WildTiger15/FraudFlow/blob/main/docs/RISKS.md">Risks</a> ·
+    <a href="https://github.com/WildTiger15/FraudFlow/blob/main/docs/INVESTIGATOR_GUIDE.md">Investigator guide</a>
+  </footer>
+</div>
+<script>
+const pct = (x) => (x * 100).toFixed(1) + "%";
+fetch("/metrics").then(r => r.json()).then(rows => {
+  const head = "<tr><th>Method</th><th>Alerts</th><th>Fraud caught</th><th>Recall</th><th>Precision</th><th>False alarms / 1,000</th></tr>";
+  document.getElementById("metrics").innerHTML = head + rows.map(m =>
+    `<tr><td>${m.method}</td><td>${m.alerts.toLocaleString()}</td><td>${m.fraud_caught} / ${m.total_fraud}</td><td>${pct(m.recall)}</td><td>${pct(m.precision)}</td><td>${m.false_alarms_per_1000.toFixed(1)}</td></tr>`).join("");
+}).catch(() => { document.getElementById("metrics").innerHTML = "<tr><td>Could not load metrics.</td></tr>"; });
+</script>
+</body>
+</html>

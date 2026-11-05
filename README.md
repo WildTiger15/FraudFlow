@@ -4,7 +4,7 @@
 
 > **Synthetic data only.** FraudFlow uses the public PaySim simulation of mobile money transactions. No real customer data is used, requested or simulated. FraudFlow never files, closes or sends anything on its own.
 
-**Live demo (read-only):** _deploying, link added when live_
+**Live demo (read-only): https://fraudflow.onrender.com** — browse the alerts, drafted cases with their source transactions, and detection metrics. Decisions are disabled on the public site. Hosted on Render's free plan, so the first visit after a quiet spell can take about a minute to wake up.
 
 ![Dashboard](dashboard/screenshots/dashboard.png)
 
@@ -53,6 +53,7 @@ Detection, measured per transaction against PaySim's fraud labels. **Sample: 454
 | Approval routing | **Fallback approval page** (`/review`), clearly labelled. **Power Automate flow designed but not yet built** ([flow/SETUP.md](flow/SETUP.md)) |
 | Dashboard | **Excel fallback** and image built from pipeline data. **Power BI version not built yet** ([dashboard/POWERBI_SETUP.md](dashboard/POWERBI_SETUP.md)) |
 | Timing study | Tooling done; **reviews not done yet** |
+| Public showcase | Live on Render (read-only demo database, `render.yaml`) |
 | Docs | [Use case](docs/USE_CASE.md), [risks](docs/RISKS.md), [investigator guide](docs/INVESTIGATOR_GUIDE.md), [primer](docs/PRIMER.md), [interview notes](docs/INTERVIEW_NOTES.md) |
 
 ## How to run
